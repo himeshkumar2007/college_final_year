@@ -3,6 +3,7 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 import cv2
 
@@ -18,6 +19,15 @@ from utils import (
 )
 
 app = FastAPI(title="Foot Measurement API")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Ensure output directory exists
 OUTPUT_DIR = "output"
