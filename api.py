@@ -33,21 +33,32 @@ app.add_middleware(
 def root():
     return {"status": "ok", "message": "Foot Measurement API running"}
 
+
 def process_image(oimg: np.ndarray) -> float:
     preprocessedOimg = preprocess(oimg)
     clusteredImg = kMeans_cluster(preprocessedOimg)
     edgedImg = edgeDetection(clusteredImg)
 
     boundRect, cnts, contours_poly, img = getBoundingBox(edgedImg)
-    _ = drawCnt(boundRect[1], cnts, contours_poly, img)
+    if not boundRect:
+        raise ValueError("No bounding box detected in first stage")
 
-    croppedImg, pcropedImg = cropOrig(boundRect[1], clusteredImg)
+    _ = drawCnt(boundRect[0], cnts, contours_poly, img)
 
+    croppedImg, pcropedImg = cropOrig(boundRect[0], clusteredImg)
     newImg = overlayImage(croppedImg, pcropedImg)
 
     fedged = edgeDetection(newImg)
     fboundRect, fcnt, fcntpoly, fimg = getBoundingBox(fedged)
-    _ = drawCnt(fboundRect[2], fcnt, fcntpoly, fimg)
+
+    if not fboundRect:
+        raise ValueError("No bounding box detected in final stage")
+
+    idx = 2 if len(fboundRect) > 2 else len(fboundRect) - 1
+    if idx < 0:
+        raise ValueError("Bounding box detection failed")
+
+    _ = drawCnt(fboundRect[idx], fcnt, fcntpoly, fimg)
 
     feet_size_mm = calcFeetSize(pcropedImg, fboundRect)
     return feet_size_mm / 10.0
@@ -67,14 +78,14 @@ async def measure_foot(file: UploadFile = File(...)):
 
     try:
         feet_size_cm = process_image(oimg)
+        return {
+            "feet_size_cm": feet_size_cm,
+            "message": "Foot size calculated successfully.",
+        }
+    except ValueError as e:
+        print("⚠️ VALIDATION ERROR:", str(e))
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception:
         print("🔥 ERROR IN process_image()")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail="Internal processing error")
-
-    return JSONResponse(
-        {
-            "feet_size_cm": feet_size_cm,
-            "message": "Foot size calculated successfully.",
-        }
-    )
