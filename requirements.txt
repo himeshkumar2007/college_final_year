@@ -1,8 +1,9 @@
+fastapi
+uvicorn[standard]
+python-multipart
+numpy
 imutils
 matplotlib
-opencv-python
 scikit-image
 scikit-learn
-python-multipart
-uvicorn[standard]
-fastapi
+opencv-python-headless
